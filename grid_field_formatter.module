@@ -6,4 +6,87 @@
  * Grid contents to a destination.
  */
 
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FormatterInterface;
+use Drupal\Core\Form\FormStateInterface;
+
 define('GRID_FIELD_FORMATTER_DEFAULT_COLUMNS', 1);
+
+/**
+ * Implements hook_field_formatter_third_party_settings_form().
+ */
+function grid_field_formatter_field_formatter_third_party_settings_form(FormatterInterface $plugin, FieldDefinitionInterface $field_definition, $view_mode, $form, FormStateInterface $form_state) {
+  $element = [];
+
+  // Add Grid Field Formatter if matching an enabled field type.
+  if (grid_field_formatter_is_eligible($field_definition)) {
+    $default_values = $plugin->getThirdPartySetting('grid_field_formatter', 'grid_field_formatter');
+
+    $element['grid_field_formatter'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['grided-field-wrapper']],
+    ];
+    // Add a checkbox to the formatter settings form to enabled a grid layout.
+    $element['grid_field_formatter']['grid_enable'] = [
+      '#title' => t('Enable multi-value field display with a grid layout.'),
+      '#type' => 'checkbox',
+      '#default_value' => isset($default_values['grid_enable']) ? $default_values['grid_enable'] : NULL,
+    ];
+    // Add a conditional text field for the number of columns of the grid.
+    $element['grid_field_formatter']['columns'] = [
+      '#title' => t('Grid layout number of columns'),
+      '#type' => 'textfield',
+      '#default_value' => isset($default_values['columns']) ? $default_values['columns'] : GRID_FIELD_FORMATTER_DEFAULT_COLUMNS,
+      '#description' => t('Enter the number of columns for each row for the grid table layout.'),
+      '#element_validate' => ['grid_field_formatter_element_validate_columns'],
+      '#states' => [
+        'visible' => [
+          'input[name$="[grid_field_formatter][grid_field_formatter][grid_enable]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+  }
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary_alter().
+ */
+function grid_field_formatter_field_formatter_settings_summary_alter(&$summary, $context) {
+  if (grid_field_formatter_is_eligible($context['field_definition'])) {
+    $settings = $context['formatter']->getThirdPartySetting('grid_field_formatter', 'grid_field_formatter');
+    if (isset($settings['grid_enable']) && $settings['grid_enable']) {
+      $summary[] = t('Multi-value Grid display: enabled');
+      $summary[] = t('Number of columns: @columns', ['@columns' => $settings['columns']]);
+    }
+  }
+}
+
+/**
+ * Check if the given field is eligible to Grid Field Formatter options.
+ */
+function grid_field_formatter_is_eligible(FieldDefinitionInterface $field_definition) {
+
+  // Grid Field Formatter is useless on single value fields.
+  if ($field_definition->getFieldStorageDefinition()->getCardinality() == 1) {
+    return FALSE;
+  }
+
+  // Get the Grid Field Formatter enabled field types.
+  $field_types = \Drupal::config('grid_field_formatter.settings')->get('field_types');
+
+  // Add Grid Field Formatter if matching an enabled field type.
+  if ($field_types[$field_definition->getType()] != $field_definition->getType()) {
+    // Check preconfigured fields.
+    $field_type_class = \Drupal::service('plugin.manager.field.field_type')->getDefinition($field_definition->getType())['class'];
+    if (is_subclass_of($field_type_class, '\Drupal\Core\Field\PreconfiguredFieldUiOptionsInterface')) {
+      foreach ($field_type_class::getPreconfiguredOptions() as $key => $option) {
+        if ($field_types['field_ui:' . $field_definition->getType() . ':' . $key]) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
+  }
+  return TRUE;
+}

@@ -70,10 +70,8 @@ class GridFieldFormatterSettingsForm extends ConfigFormBase {
 
     // Gather valid field types.
     $field_type_options = [];
-    foreach ($this->fieldTypePluginManager->getGroupedDefinitions($this->fieldTypePluginManager->getUiDefinitions()) as $category => $field_types) {
-      foreach ($field_types as $name => $field_type) {
-        $field_type_options[$name] = $field_type['label'];
-      }
+    foreach ($this->fieldTypePluginManager->getUiDefinitions() as $name => $field_type) {
+      $field_type_options[$name] = $field_type['label'];
     }
 
     $form['field_types'] = array(
