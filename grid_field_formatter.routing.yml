@@ -1,0 +1,8 @@
+# Settings for Grid Field Formatter
+grid_field_formatter.settings:
+  path: 'admin/config/content/grid-field-formatter'
+  defaults:
+    _form: '\Drupal\grid_field_formatter\Form\GridFieldFormatterSettingsForm'
+    _title: 'Grid Field Formatter Settings'
+  requirements:
+    _permission: 'administer site configuration'

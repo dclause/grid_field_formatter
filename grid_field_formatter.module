@@ -1,0 +1,9 @@
+<?php
+
+/**
+ * @file
+ * Module that gives you a field formatter, which enables field layout with
+ * Grid contents to a destination.
+ */
+
+define('GRID_FIELD_FORMATTER_DEFAULT_COLUMNS', 1);
