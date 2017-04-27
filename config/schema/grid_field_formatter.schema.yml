@@ -4,9 +4,9 @@ grid_field_formatter.settings:
   mapping:
     bootstrap:
       type: boolean
-       label: Enable Bootstrap compatibility
+      label: 'Enable Bootstrap compatibility'
     field_types:
       type: sequence
-      label: List of field types supporting Grid Field Formatter
+      label: 'List of field types supporting Grid Field Formatter'
       sequence:
         - type: string
