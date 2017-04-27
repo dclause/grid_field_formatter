@@ -6,9 +6,12 @@
  * Grid contents to a destination.
  */
 
+use Drupal\Core\Entity\Entity\EntityViewDisplay;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
 
 define('GRID_FIELD_FORMATTER_DEFAULT_COLUMNS', 1);
 
@@ -50,6 +53,17 @@ function grid_field_formatter_field_formatter_third_party_settings_form(Formatte
 }
 
 /**
+ * Form element validation handler for columns field in settings form.
+ */
+function grid_field_formatter_element_validate_columns($element, FormStateInterface $form_state) {
+  $value = $element['#value'];
+  // The number of columns must be valid number and greater than 0.
+  if (!(is_numeric($value) && $value > 0)) {
+    $form_state->setError($element, t('The number of columns must be valid number and greater than 0.'));
+  }
+}
+
+/**
  * Implements hook_field_formatter_settings_summary_alter().
  */
 function grid_field_formatter_field_formatter_settings_summary_alter(&$summary, $context) {
@@ -60,6 +74,72 @@ function grid_field_formatter_field_formatter_settings_summary_alter(&$summary, 
       $summary[] = t('Number of columns: @columns', ['@columns' => $settings['columns']]);
     }
   }
+}
+
+/**
+ * Implements hook_entity_display_build_alter().
+ */
+function grid_field_formatter_entity_display_build_alter(&$build, $context) {
+  $entity = $context['entity'];
+
+  // Only act on content entities.
+  if (!($entity instanceof FieldableEntityInterface)) {
+    return;
+  }
+
+  // Append RDF term mappings on displayed taxonomy links.
+  foreach (Element::children($build) as $field_name) {
+    $field = &$build[$field_name];
+    $field_definition = $entity->getFieldDefinition($field_name);
+
+    if (grid_field_formatter_is_eligible($field_definition)) {
+      // get the field formatter settings...
+      $entity_display = EntityViewDisplay::collectRenderDisplay($entity, $context['view_mode']);
+      $field_display = $entity_display->getComponent($field_name);
+      // Get Grid Field Formatter settings.
+      $grid_enabled = isset($field_display['third_party_settings']['grid_field_formatter']['grid_field_formatter']['grid_enable']) ? $field_display['third_party_settings']['grid_field_formatter']['grid_field_formatter']['grid_enable'] : FALSE;
+      $columns = isset($field_display['third_party_settings']['grid_field_formatter']['grid_field_formatter']['columns']) ? $field_display['third_party_settings']['grid_field_formatter']['grid_field_formatter']['columns'] : GRID_FIELD_FORMATTER_DEFAULT_COLUMNS;
+      if ($grid_enabled) {
+        $field['#theme'] = 'grid_field_formatter';
+        $field['#columns'] = $columns;
+      }
+    }
+  }
+}
+
+/**
+ * Theme preprocess function for grid_field_formatter.
+ *
+ * This function essentially extends the core field module theming methods, in
+ * particular template_preprocess_field. It also introduces new field template
+ * suggestions such as:
+ *   - grid-field-formatter.tpl.php
+ *   - grid-field-formatter--[FIELD_TYPE].tpl.php
+ *   - grid-field-formatter--[FIELD_NAME].tpl.php
+ *   - grid-field-formatter--[FIELD_NAME]--[BUNDLE].tpl.php
+ *
+ * @see grid-field-formatter.tpl.php
+ */
+function template_preprocess_grid_field_formatter(&$variables, $hook) {
+  // Extend the core field module theming functions.
+  template_preprocess_field($variables, $hook);
+  $variables['columns'] = $variables['element']['#columns'];
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK().
+ */
+function grid_field_formatter_theme_suggestions_grid_field_formatter(array $variables) {
+  $suggestions = array();
+  $element = $variables['element'];
+
+  $suggestions[] = 'grid_field_formatter__' . $element['#field_type'];
+  $suggestions[] = 'grid_field_formatter__' . $element['#field_name'];
+  $suggestions[] = 'grid_field_formatter__' . $element['#entity_type'] . '__' . $element['#bundle'];
+  $suggestions[] = 'grid_field_formatter__' . $element['#entity_type'] . '__' . $element['#field_name'];
+  $suggestions[] = 'grid_field_formatter__' . $element['#entity_type'] . '__' . $element['#field_name'] . '__' . $element['#bundle'];
+
+  return $suggestions;
 }
 
 /**
@@ -89,4 +169,15 @@ function grid_field_formatter_is_eligible(FieldDefinitionInterface $field_defini
     return FALSE;
   }
   return TRUE;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function grid_field_formatter_theme() {
+  return [
+    'grid_field_formatter' => [
+      'render element' => 'element',
+    ],
+  ];
 }
