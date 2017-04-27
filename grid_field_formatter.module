@@ -6,12 +6,14 @@
  * Grid contents to a destination.
  */
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Template\Attribute;
 
 define('GRID_FIELD_FORMATTER_DEFAULT_COLUMNS', 1);
 
@@ -57,9 +59,9 @@ function grid_field_formatter_field_formatter_third_party_settings_form(Formatte
  */
 function grid_field_formatter_element_validate_columns($element, FormStateInterface $form_state) {
   $value = $element['#value'];
-  // The number of columns must be valid number and greater than 0.
-  if (!(is_numeric($value) && $value > 0)) {
-    $form_state->setError($element, t('The number of columns must be valid number and greater than 0.'));
+  // The number of columns must be valid number and between 1 and 12.
+  if (!(is_numeric($value) && $value > 0 && $value < 13)) {
+    $form_state->setError($element, t('The number of columns must be valid number and between 1 and 12.'));
   }
 }
 
@@ -123,7 +125,24 @@ function grid_field_formatter_entity_display_build_alter(&$build, $context) {
 function template_preprocess_grid_field_formatter(&$variables, $hook) {
   // Extend the core field module theming functions.
   template_preprocess_field($variables, $hook);
-  $variables['columns'] = $variables['element']['#columns'];
+
+  // Add colummns number.
+  $number_of_columns = $variables['element']['#columns'];
+  $variables['columns'] = $number_of_columns;
+
+  // Build row attributes.
+  $variables['row_attributes'] = new Attribute([
+    'class' => ['row'],
+  ]);
+
+  // Build column layout number.
+  $variables['column_layout'] = floor(12 / $number_of_columns);
+
+  // Add Grid Field Formatter css if bootstrap is not enabled.
+  $bootstrap_enabled = \Drupal::config('grid_field_formatter.settings')->get('bootstrap');
+  if (!$bootstrap_enabled) {
+    $variables['#attached']['library'][] = 'grid_field_formatter/grid_field_formatter';
+  }
 }
 
 /**

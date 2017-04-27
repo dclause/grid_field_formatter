@@ -1,0 +1,5 @@
+grid_field_formatter:
+  version: VERSION
+  css:
+    component:
+      css/grid12.css: {}
