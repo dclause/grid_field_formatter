@@ -73,6 +73,13 @@ class GridFieldFormatterSettingsForm extends ConfigFormBase {
       $field_type_options[$name] = $field_type['label'];
     }
 
+    $form['bootstrap'] = array(
+      '#title' => $this->t('Enable Bootstrap compatibility.'),
+      '#type' => 'checkbox',
+      '#description' => $this->t('If uncheck, Grid Field Formatter will add some custom CSS. Check this if your theme or a module of your site loads Bootstrap CSS.'),
+      '#default_value' => $config->get('bootstrap'),
+    );
+
     $form['field_types'] = array(
       '#title' => $this->t('Please select the field type for which Grid Field Formatter should be available.'),
       '#type' => 'checkboxes',
@@ -88,8 +95,9 @@ class GridFieldFormatterSettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('grid_field_formatter.settings');
-    $config->set('field_types', $form_state->getValue('field_types'))
-      ->save();
+    $config->set('field_types', $form_state->getValue('field_types'));
+    $config->set('bootstrap', $form_state->getValue('bootstrap'));
+    $config->save();
   }
 
 }
